@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from 'react';
-import { Upload, Download, History, Eraser, Camera, ArrowRight, Sparkles, Home } from 'lucide-react';
-import { ControlPanel } from './components/ControlPanel';
-import { ComparisonSlider } from './components/ComparisonSlider';
+import React, { useState } from 'react';
+import { Download, Eraser, Camera, ArrowRight, Sparkles, Home } from 'lucide-react';
+import { ControlPanel } from './ControlPanel';
+import { ComparisonSlider } from './ComparisonSlider';
 import { NailDesignState, DEFAULT_DESIGN, PresetDesign, NailShape, NailLength, NailFinish } from './types';
-import { generateNailArt } from './services/geminiService';
+import { generateNailArt } from './geminiService';
 
 const SAMPLE_IMAGE = "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=2070&auto=format&fit=crop";
 
