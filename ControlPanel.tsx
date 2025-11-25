@@ -1,6 +1,6 @@
 import React from 'react';
-import { NailDesignState, NailShape, NailLength, NailFinish, PresetDesign } from '../types';
-import { Wand2, Sparkles, Palette, Ruler, Shapes, Type } from 'lucide-react';
+import { NailDesignState, NailShape, NailLength, NailFinish, PresetDesign } from './types';
+import { Wand2, Sparkles, Palette, Shapes } from 'lucide-react';
 
 interface ControlPanelProps {
   design: NailDesignState;
