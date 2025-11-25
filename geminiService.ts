@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { NailDesignState } from "../types";
+import { NailDesignState } from "./types";
 
 const MODEL_NAME = "gemini-2.5-flash-image";
 
@@ -7,12 +7,11 @@ export const generateNailArt = async (
   originalImageBase64: string,
   design: NailDesignState
 ): Promise<string> => {
-  // PRIORITY 1: Check if running inside WordPress (injected via wp_localize_script)
-  // PRIORITY 2: Check environment variable (Vercel)
-  const apiKey = window.nailArtSettings?.apiKey || process.env.API_KEY;
+  // Use the API key securely from Vercel environment variables
+  const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
-    throw new Error("API Key is missing. Please configure it in Vercel or WordPress settings.");
+    throw new Error("API Key is missing. Please configure VITE_API_KEY in Vercel Settings.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -53,7 +52,7 @@ export const generateNailArt = async (
         parts: [
           {
             inlineData: {
-              mimeType: "image/png", // Assuming PNG for internal consistency, but accepts generic base64
+              mimeType: "image/png",
               data: cleanBase64
             }
           },
@@ -64,8 +63,6 @@ export const generateNailArt = async (
       }
     });
 
-    // Extract image from response
-    // Gemini 2.5 Flash Image usually returns the image in the candidates
     const parts = response.candidates?.[0]?.content?.parts;
     if (!parts) {
       throw new Error("No content generated");
