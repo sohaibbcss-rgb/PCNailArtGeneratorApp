@@ -1,8 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
-import { NailDesignState } from "./types";
+import { NailDesignState } from "../types";
 
-// Upgraded to Pro model for better editing capabilities and photorealism
-const MODEL_NAME = "gemini-3-pro-image-preview";
+const MODEL_NAME = "gemini-2.5-flash-image";
 
 export const generateNailArt = async (
   originalImageBase64: string,
