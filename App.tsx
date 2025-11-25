@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Download, Eraser, Camera, ArrowRight, Sparkles, Home } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, Eraser, Camera, ArrowRight, Sparkles, Home, AlertTriangle, Key } from 'lucide-react';
 import { ControlPanel } from './ControlPanel';
 import { ComparisonSlider } from './ComparisonSlider';
 import { NailDesignState, DEFAULT_DESIGN, PresetDesign, NailShape, NailLength, NailFinish } from './types';
@@ -62,6 +62,27 @@ export default function App() {
   const [design, setDesign] = useState<NailDesignState>(DEFAULT_DESIGN);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
+
+  // Check for API Key on mount
+  useEffect(() => {
+    const checkKey = async () => {
+      const hasEnvKey = !!process.env.API_KEY;
+      const hasWindowKey = !!window.nailArtSettings?.apiKey;
+      let hasStudioKey = false;
+      
+      if (window.aistudio) {
+        hasStudioKey = await window.aistudio.hasSelectedApiKey();
+      }
+
+      if (!hasEnvKey && !hasWindowKey && !hasStudioKey) {
+        setIsApiKeyMissing(true);
+      } else {
+        setIsApiKeyMissing(false);
+      }
+    };
+    checkKey();
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -85,7 +106,14 @@ export default function App() {
       const result = await generateNailArt(originalImage, design);
       setGeneratedImage(result);
     } catch (err: any) {
-      setError(err.message || "Failed to generate nail art. Please try again.");
+      console.error(err);
+      const errorMessage = err.message || "Failed to generate nail art. Please try again.";
+      setError(errorMessage);
+      
+      // If the error indicates an issue with the API key, show the setup banner
+      if (errorMessage.includes("API Key") || errorMessage.includes("403") || errorMessage.includes("400")) {
+        setIsApiKeyMissing(true);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -115,12 +143,70 @@ export default function App() {
       });
   };
 
+  const handleSelectKey = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      // Reload page or re-check key after selection
+      window.location.reload();
+    }
+  };
+
   return (
     // Responsive Layout: Column on mobile/iframe, Row on large screens
-    <div className="flex flex-col lg:flex-row h-screen bg-[#0f172a] text-slate-100 overflow-hidden selection:bg-pink-500 selection:text-white">
+    <div className="flex flex-col lg:flex-row h-screen bg-[#0f172a] text-slate-100 overflow-hidden selection:bg-pink-500 selection:text-white relative">
       
+      {/* API Key Missing Banner Overlay */}
+      {isApiKeyMissing && (
+        <div className="absolute inset-0 z-50 bg-[#0f172a]/95 flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-slate-800 border border-red-500/50 rounded-2xl p-8 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Key size={32} className="text-red-400" />
+            </div>
+            <h2 className="text-2xl font-serif font-bold text-white mb-3">Setup Required</h2>
+            <p className="text-slate-300 mb-6 leading-relaxed">
+              The Google Gemini API Key is missing or invalid.
+            </p>
+            
+            <div className="space-y-4 text-left bg-slate-900/50 p-4 rounded-lg mb-6">
+              <div className="flex gap-3">
+                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold">1</span>
+                 <p className="text-sm text-slate-400">Go to Vercel Project Settings > Environment Variables.</p>
+              </div>
+              <div className="flex gap-3">
+                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold">2</span>
+                 <div className="text-sm text-slate-400">
+                   Add <span className="text-white font-mono bg-slate-800 px-1 rounded">VITE_API_KEY</span> with your Google API Key.
+                 </div>
+              </div>
+               <div className="flex gap-3">
+                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold">3</span>
+                 <p className="text-sm text-yellow-400 font-medium">Important: Redeploy the project for changes to take effect.</p>
+              </div>
+            </div>
+
+            {/* Check for AI Studio Context */}
+            {window.aistudio ? (
+              <button 
+                onClick={handleSelectKey}
+                className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25"
+              >
+                Select API Key via Google
+              </button>
+            ) : (
+              <a 
+                href="https://vercel.com/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="block w-full py-3 px-6 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-all"
+              >
+                Open Vercel Dashboard
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Left Sidebar - Controls */}
-      {/* Order 2 on mobile so controls appear BELOW the image */}
       <aside className="order-2 lg:order-1 w-full lg:w-[400px] h-[50vh] lg:h-full flex-shrink-0 border-t lg:border-t-0 lg:border-r border-slate-800 bg-[#111827] flex flex-col z-20 shadow-2xl">
         <div className="p-4 lg:p-6 border-b border-slate-800 flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -144,7 +230,6 @@ export default function App() {
       </aside>
 
       {/* Main Content Area */}
-      {/* Order 1 on mobile so Image appears FIRST */}
       <main className="order-1 lg:order-2 flex-1 relative flex flex-col h-[50vh] lg:h-full">
         
         {/* Top Bar */}
@@ -229,8 +314,10 @@ export default function App() {
             ) : (
               // Image Viewer
               <div className="relative w-full h-full flex flex-col">
+                {/* Error Banner */}
                 {error && (
-                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/90 text-white px-4 py-2 rounded-lg shadow-lg backdrop-blur-sm text-sm font-medium animate-bounce w-max max-w-full text-center">
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/90 text-white px-4 py-3 rounded-xl shadow-xl backdrop-blur-md text-sm font-medium animate-bounce w-[90%] lg:w-auto text-center border border-red-400/50 flex items-center gap-2">
+                    <AlertTriangle size={18} />
                     {error}
                   </div>
                 )}
