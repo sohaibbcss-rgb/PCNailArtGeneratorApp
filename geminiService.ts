@@ -1,20 +1,38 @@
 import { GoogleGenAI } from "@google/genai";
-import { NailDesignState } from "../types";
+import { NailDesignState } from "./types";
 
+// Using Flash-Image for better reliability and speed
 const MODEL_NAME = "gemini-2.5-flash-image";
 
 export const generateNailArt = async (
   originalImageBase64: string,
   design: NailDesignState
 ): Promise<string> => {
-  // Use the API key securely from Vercel environment variables
-  const apiKey = process.env.API_KEY;
+  
+  // 1. Try Vercel Env Var
+  let apiKey = process.env.API_KEY;
 
-  if (!apiKey) {
-    throw new Error("API Key is missing. Please configure VITE_API_KEY in Vercel Settings.");
+  // 2. Try WordPress/Window Injection
+  if (!apiKey && window.nailArtSettings?.apiKey) {
+    apiKey = window.nailArtSettings.apiKey;
   }
 
-  const ai = new GoogleGenAI({ apiKey });
+  // 3. Try AI Studio Selection (if available in preview)
+  // We don't need to manually get the key string for AI Studio, 
+  // checking hasSelectedApiKey verifies we can proceed.
+  const isAIStudio = window.aistudio && await window.aistudio.hasSelectedApiKey();
+
+  if (!apiKey && !isAIStudio) {
+    throw new Error("API Key is missing. Please set VITE_API_KEY in Vercel Settings or inject via window.nailArtSettings.");
+  }
+
+  // Initialize AI Client
+  // If we are in AI Studio, the key is injected automatically by the SDK context,
+  // so we can pass a dummy key or rely on the environment if process.env.API_KEY is populated by the studio.
+  // However, the safest bet for the SDK is to assume process.env.API_KEY is set if we are in a valid env.
+  // If we are falling back to a manually provided key (Env or Window), we use it.
+  
+  const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || 'DUMMY_KEY_FOR_STUDIO' });
 
   // Clean base64 string (remove data:image/png;base64, prefix if present)
   const cleanBase64 = originalImageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
